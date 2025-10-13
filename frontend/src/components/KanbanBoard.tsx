@@ -3,9 +3,11 @@ import TaskCard from "./TaskCard"
 
 interface KanbanBoardProps {
   tasks: TaskItem[]
+  onUpdateTask?: (taskId: string, updates: Partial<TaskItem>) => void
+  onDeleteTask?: (taskId: string) => void
 }
 
-export default function KanbanBoard({ tasks }: KanbanBoardProps) {
+export default function KanbanBoard({ tasks, onUpdateTask, onDeleteTask }: KanbanBoardProps) {
   const renderColumn = (status: TaskStatus, title: string) => {
     const columnTasks = filterTasksByStatus(tasks, status)
 
@@ -17,7 +19,12 @@ export default function KanbanBoard({ tasks }: KanbanBoardProps) {
           </h3>
           <div className="space-y-3">
             {columnTasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                onUpdate={onUpdateTask}
+                onDelete={onDeleteTask}
+              />
             ))}
           </div>
         </div>

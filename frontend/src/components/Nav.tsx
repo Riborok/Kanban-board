@@ -1,27 +1,23 @@
 import { useState } from "react"
+import { Link, useLocation } from "react-router-dom"
 
-export interface NavProps {
-  current: PageKey
-  onChange: (page: PageKey) => void
-}
+export default function Nav() {
+    const [hovered, setHovered] = useState<string | null>(null)
+    const location = useLocation()
 
-type PageKey = "home" | "projects" | "profile"
-
-export default function Nav({ current, onChange }: NavProps) {
-    const [hovered, setHovered] = useState<PageKey | null>(null);
-
-    const item = (key: PageKey, label: string) => {
-        const isActive = current === key;
-        const isHovered = hovered === key;
+    const item = (path: string, label: string) => {
+        const isActive = location.pathname === path ||
+                        (path === '/projects' && location.pathname.startsWith('/projects'))
+        const isHovered = hovered === path
 
         return (
-            <button
-                key={key}
-                onClick={() => onChange(key)}
-                onMouseEnter={() => setHovered(key)}
+            <Link
+                key={path}
+                to={path}
+                onMouseEnter={() => setHovered(path)}
                 onMouseLeave={() => setHovered(null)}
                 className={`
-                    mr-2 rounded-md px-3 py-1.5 border-2 text-sm transition-colors
+                    mr-2 rounded-md px-3 py-1.5 border-2 text-sm
                     ${isActive
                         ? 'border-violet-600'
                         : isHovered
@@ -31,15 +27,15 @@ export default function Nav({ current, onChange }: NavProps) {
                 `}
             >
                 {label}
-            </button>
-        );
-    };
+            </Link>
+        )
+    }
 
     return (
         <nav className="mb-5 flex gap-4 justify-center">
-            {item('home', 'Главная')}
-            {item('projects', 'Проекты')}
-            {item('profile', 'Профиль')}
+            {item('/', 'Главная')}
+            {item('/projects', 'Проекты')}
+            {item('/profile', 'Профиль')}
         </nav>
-    );
+    )
 }

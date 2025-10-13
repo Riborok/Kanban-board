@@ -75,14 +75,14 @@ export default function TaskForm({ onSubmit, onCancel }: TaskFormProps) {
       <div className="flex gap-2">
         <button
           type="submit"
-          className="bg-violet-600 text-white px-4 py-2 rounded hover:bg-violet-700 transition-colors"
+          className="bg-violet-600 text-white px-4 py-2 rounded hover:bg-violet-700"
         >
           Создать
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors"
+          className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600 cursor-pointer"
         >
           Отмена
         </button>

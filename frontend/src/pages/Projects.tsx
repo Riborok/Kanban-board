@@ -1,74 +1,66 @@
 import { useState } from "react"
-import { Project, TaskItem } from "../utils/tasks"
+import { useNavigate, useParams } from "react-router-dom"
+import { useApp } from "../context/AppContext"
+import { generateId } from "../utils/id"
 import ProjectList from "../components/ProjectList"
 import ProjectDetail from "../components/ProjectDetail.tsx"
+import ProjectForm from "../components/ProjectForm"
 
 export default function Projects() {
-  const [projects, setProjects] = useState<Project[]>([
-    { id: "1", name: "Веб-приложение" },
-    { id: "2", name: "Мобильное приложение" },
-    { id: "3", name: "Дизайн система" },
-  ])
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const { projects, tasks, addProject } = useApp()
+  const [showProjectForm, setShowProjectForm] = useState(false)
 
-  const [tasks, setTasks] = useState<TaskItem[]>([
-    {
-      id: "1",
-      title: "Создать макет",
-      description: "Разработать дизайн главной страницы",
-      assignee: "Иван Иванов",
-      status: "done",
-      projectId: "1",
-    },
-    {
-      id: "2",
-      title: "Реализовать API",
-      description: "Разработать REST API для backend",
-      assignee: "Петр Петров",
-      status: "in_progress",
-      projectId: "1",
-    },
-    {
-      id: "3",
-      title: "Написать тесты",
-      description: "Покрыть код unit-тестами",
-      assignee: "Мария Сидорова",
-      status: "todo",
-      projectId: "1",
-    },
-    {
-      id: "4",
-      title: "Настроить CI/CD",
-      description: "Настроить автоматический деплой",
-      assignee: "Сергей Смирнов",
-      status: "todo",
-      projectId: "2",
-    },
-  ])
+  const selectedProject = id ? projects.find((p) => p.id === id) : null
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
-
-  const handleAddTask = (task: TaskItem) => {
-    setTasks([...tasks, task])
+  const handleCreateProject = (name: string) => {
+    const newProject = {
+      id: generateId(),
+      name,
+    }
+    addProject(newProject)
+    setShowProjectForm(false)
   }
 
-  const selectedProject = projects.find((p) => p.id === selectedProjectId)
+  const handleProjectClick = (projectId: string) => {
+    navigate(`/projects/${projectId}`)
+  }
+
+  const handleBack = () => {
+    navigate("/projects")
+  }
 
   return (
     <section className="container mx-auto px-4">
       {selectedProject ? (
         <ProjectDetail
           project={selectedProject}
-          tasks={tasks}
-          onAddTask={handleAddTask}
-          onBack={() => setSelectedProjectId(null)}
+          onBack={handleBack}
         />
       ) : (
         <div>
-          <h2 className="text-2xl font-bold mb-6 text-white">Проекты</h2>
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-white">Проекты</h2>
+            <button
+              onClick={() => setShowProjectForm(!showProjectForm)}
+              className="bg-violet-600 text-white px-4 py-2 rounded hover:bg-violet-700 cursor-pointer"
+            >
+              {showProjectForm ? "Отменить" : "+ Создать проект"}
+            </button>
+          </div>
+
+          {showProjectForm && (
+            <ProjectForm
+              onSubmit={handleCreateProject}
+              onCancel={() => setShowProjectForm(false)}
+            />
+          )}
+
           <ProjectList
             projects={projects}
             tasks={tasks}
-            onProjectClick={setSelectedProjectId}
+            onProjectClick={handleProjectClick}
           />
         </div>
       )}

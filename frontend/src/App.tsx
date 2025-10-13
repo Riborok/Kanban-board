@@ -1,22 +1,26 @@
-import { useState } from 'react'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import './App.css'
 import Nav from './components/Nav'
 import Home from './pages/Home'
 import Projects from './pages/Projects'
 import Profile from './pages/Profile'
-
-type PageKey = 'home' | 'projects' | 'profile'
+import { AppProvider } from './context/AppContext'
 
 function App() {
-    const [page, setPage] = useState<PageKey>('home')
-
     return (
-        <div>
-            <Nav current={page} onChange={setPage} />
-            {page === 'home' && <Home />}
-            {page === 'projects' && <Projects />}
-            {page === 'profile' && <Profile />}
-        </div>
+        <AppProvider>
+            <Router>
+                <div>
+                    <Nav />
+                    <Routes>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/projects" element={<Projects />} />
+                        <Route path="/projects/:id" element={<Projects />} />
+                        <Route path="/profile" element={<Profile />} />
+                    </Routes>
+                </div>
+            </Router>
+        </AppProvider>
     )
 }
 

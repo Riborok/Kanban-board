@@ -1,23 +1,23 @@
 ﻿import { useState } from "react"
-import { TaskItem, TaskStatus, Project } from "../utils/tasks.ts"
+import { TaskStatus, Project } from "../utils/tasks.ts"
 import KanbanBoard from "./KanbanBoard.tsx"
 import TaskForm from "./TaskForm.tsx"
 import { generateId } from "../utils/id.ts"
+import { useApp } from "../context/AppContext.tsx"
 
 interface ProjectDetailProps {
   project: Project
-  tasks: TaskItem[]
-  onAddTask: (task: TaskItem) => void
   onBack: () => void
 }
 
-export default function ProjectDetail({ project, tasks, onAddTask, onBack }: ProjectDetailProps) {
+export default function ProjectDetail({ project, onBack }: ProjectDetailProps) {
   const [showForm, setShowForm] = useState(false)
+  const { tasks, addTask, updateTask, deleteTask } = useApp()
 
   const projectTasks = tasks.filter((task) => task.projectId === project.id)
 
   const handleCreateTask = (title: string, description: string, assignee: string, status: TaskStatus) => {
-    const newTask: TaskItem = {
+    const newTask = {
       id: generateId(),
       title,
       description,
@@ -25,7 +25,7 @@ export default function ProjectDetail({ project, tasks, onAddTask, onBack }: Pro
       status,
       projectId: project.id,
     }
-    onAddTask(newTask)
+    addTask(newTask)
     setShowForm(false)
   }
 
@@ -35,7 +35,7 @@ export default function ProjectDetail({ project, tasks, onAddTask, onBack }: Pro
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors"
+            className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600 cursor-pointer"
           >
             ← Назад
           </button>
@@ -43,7 +43,7 @@ export default function ProjectDetail({ project, tasks, onAddTask, onBack }: Pro
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-violet-600 text-white px-4 py-2 rounded hover:bg-violet-700 transition-colors"
+          className="bg-violet-600 text-white px-4 py-2 rounded hover:bg-violet-700 cursor-pointer"
         >
           {showForm ? "Отменить" : "+ Создать задачу"}
         </button>
@@ -56,7 +56,11 @@ export default function ProjectDetail({ project, tasks, onAddTask, onBack }: Pro
         />
       )}
 
-      <KanbanBoard tasks={projectTasks} />
+      <KanbanBoard
+        tasks={projectTasks}
+        onUpdateTask={updateTask}
+        onDeleteTask={deleteTask}
+      />
     </div>
   )
 }
