@@ -6,8 +6,9 @@ export default function Nav() {
     const location = useLocation()
 
     const item = (path: string, label: string) => {
-        const isActive = location.pathname === path ||
-                        (path === '/projects' && location.pathname.startsWith('/projects'))
+        const isActive =
+            location.pathname === path ||
+            (path === "/projects" && location.pathname.startsWith("/projects"))
         const isHovered = hovered === path
 
         return (
@@ -18,11 +19,12 @@ export default function Nav() {
                 onMouseLeave={() => setHovered(null)}
                 className={`
                     mr-2 rounded-md px-3 py-1.5 border-2 text-sm
-                    ${isActive
-                        ? 'border-violet-600'
-                        : isHovered
-                            ? 'border-gray-700'
-                            : 'border-white'
+                    ${
+                        isActive
+                            ? "border-violet-600"
+                            : isHovered
+                              ? "border-gray-700"
+                              : "border-white"
                     }
                 `}
             >
@@ -33,9 +35,9 @@ export default function Nav() {
 
     return (
         <nav className="mb-5 flex gap-4 justify-center">
-            {item('/', 'Главная')}
-            {item('/projects', 'Проекты')}
-            {item('/profile', 'Профиль')}
+            {item("/", "Главная")}
+            {item("/projects", "Проекты")}
+            {item("/profile", "Профиль")}
         </nav>
     )
 }

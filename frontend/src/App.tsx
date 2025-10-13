@@ -1,10 +1,10 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import './App.css'
-import Nav from './components/Nav'
-import Home from './pages/Home'
-import Projects from './pages/Projects'
-import Profile from './pages/Profile'
-import { AppProvider } from './context/AppContext'
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
+import "./App.css"
+import Nav from "./components/Nav"
+import Home from "./pages/Home"
+import Projects from "./pages/Projects"
+import Profile from "./pages/Profile"
+import { AppProvider } from "./context/AppContext"
 
 function App() {
     return (

@@ -6,61 +6,59 @@ import { generateId } from "../utils/id.ts"
 import { useApp } from "../context/AppContext.tsx"
 
 interface ProjectDetailProps {
-  project: Project
-  onBack: () => void
+    project: Project
+    onBack: () => void
 }
 
 export default function ProjectDetail({ project, onBack }: ProjectDetailProps) {
-  const [showForm, setShowForm] = useState(false)
-  const { tasks, addTask, updateTask, deleteTask } = useApp()
+    const [showForm, setShowForm] = useState(false)
+    const { tasks, addTask, updateTask, deleteTask } = useApp()
 
-  const projectTasks = tasks.filter((task) => task.projectId === project.id)
+    const projectTasks = tasks.filter((task) => task.projectId === project.id)
 
-  const handleCreateTask = (title: string, description: string, assignee: string, status: TaskStatus) => {
-    const newTask = {
-      id: generateId(),
-      title,
-      description,
-      assignee,
-      status,
-      projectId: project.id,
+    const handleCreateTask = (
+        title: string,
+        description: string,
+        assignee: string,
+        status: TaskStatus
+    ) => {
+        const newTask = {
+            id: generateId(),
+            title,
+            description,
+            assignee,
+            status,
+            projectId: project.id,
+        }
+        addTask(newTask)
+        setShowForm(false)
     }
-    addTask(newTask)
-    setShowForm(false)
-  }
 
-  return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600 cursor-pointer"
-          >
-            ← Назад
-          </button>
-          <h2 className="text-2xl font-bold text-white">{project.name}</h2>
+    return (
+        <div>
+            <div className="mb-6 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={onBack}
+                        className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600 cursor-pointer"
+                    >
+                        ← Назад
+                    </button>
+                    <h2 className="text-2xl font-bold text-white">{project.name}</h2>
+                </div>
+                <button
+                    onClick={() => setShowForm(!showForm)}
+                    className="bg-violet-600 text-white px-4 py-2 rounded hover:bg-violet-700 cursor-pointer"
+                >
+                    {showForm ? "Отменить" : "+ Создать задачу"}
+                </button>
+            </div>
+
+            {showForm && (
+                <TaskForm onSubmit={handleCreateTask} onCancel={() => setShowForm(false)} />
+            )}
+
+            <KanbanBoard tasks={projectTasks} onUpdateTask={updateTask} onDeleteTask={deleteTask} />
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-violet-600 text-white px-4 py-2 rounded hover:bg-violet-700 cursor-pointer"
-        >
-          {showForm ? "Отменить" : "+ Создать задачу"}
-        </button>
-      </div>
-
-      {showForm && (
-        <TaskForm
-          onSubmit={handleCreateTask}
-          onCancel={() => setShowForm(false)}
-        />
-      )}
-
-      <KanbanBoard
-        tasks={projectTasks}
-        onUpdateTask={updateTask}
-        onDeleteTask={deleteTask}
-      />
-    </div>
-  )
+    )
 }
