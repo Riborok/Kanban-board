@@ -1,9 +1,25 @@
 services:
+  backend:
+    build: ./backend
+    container_name: spp-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - CLIENT_URLS=http://localhost:8080
+    restart: unless-stopped
+
   frontend:
-    build: ./frontend
-    container_name: lab-frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:5000/api
+    container_name: spp-frontend
     ports:
       - "8080:80"
     environment:
       - NODE_ENV=production
+    depends_on:
+      - backend
     restart: unless-stopped

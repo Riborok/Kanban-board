@@ -1,75 +1,130 @@
-﻿import { createContext, useContext, useState, ReactNode } from "react"
+﻿import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { Project, TaskItem } from "../utils/tasks"
+import { projectsApi, tasksApi } from "../api/client"
 
 interface AppContextType {
     projects: Project[]
     tasks: TaskItem[]
-    addProject: (project: Project) => void
-    addTask: (task: TaskItem) => void
-    updateTask: (taskId: string, updates: Partial<TaskItem>) => void
-    deleteTask: (taskId: string) => void
+    loading: boolean
+    error: string | null
+    addProject: (name: string) => Promise<void>
+    updateProject: (id: string, name: string) => Promise<void>
+    deleteProject: (id: string) => Promise<void>
+    addTask: (task: Omit<TaskItem, "id">) => Promise<void>
+    updateTask: (taskId: string, updates: Partial<Omit<TaskItem, "id">>) => Promise<void>
+    deleteTask: (taskId: string) => Promise<void>
+    refreshProjects: () => Promise<void>
+    refreshTasks: () => Promise<void>
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
 export function AppProvider({ children }: { children: ReactNode }) {
-    const [projects, setProjects] = useState<Project[]>([
-        { id: "1", name: "Веб-приложение" },
-        { id: "2", name: "Мобильное приложение" },
-        { id: "3", name: "Дизайн система" },
-    ])
+    const [projects, setProjects] = useState<Project[]>([])
+    const [tasks, setTasks] = useState<TaskItem[]>([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
 
-    const [tasks, setTasks] = useState<TaskItem[]>([
-        {
-            id: "1",
-            title: "Создать макет",
-            description: "Разработать дизайн главной страницы",
-            assignee: "Иван Иванов",
-            status: "done",
-            projectId: "1",
-        },
-        {
-            id: "2",
-            title: "Реализовать API",
-            description: "Разработать REST API для backend",
-            assignee: "Петр Петров",
-            status: "in_progress",
-            projectId: "1",
-        },
-        {
-            id: "3",
-            title: "Написать тесты",
-            description: "Покрыть код unit-тестами",
-            assignee: "Мария Сидорова",
-            status: "todo",
-            projectId: "1",
-        },
-        {
-            id: "4",
-            title: "Настроить CI/CD",
-            description: "Настроить автоматический деплой",
-            assignee: "Сергей Смирнов",
-            status: "todo",
-            projectId: "2",
-        },
-    ])
-
-    const addProject = (project: Project) => {
-        setProjects((prev) => [...prev, project])
+    const refreshProjects = async () => {
+        try {
+            setError(null)
+            const data = await projectsApi.getAll()
+            setProjects(data)
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to load projects")
+            console.error("Error loading projects:", err)
+        }
     }
 
-    const addTask = (task: TaskItem) => {
-        setTasks((prev) => [...prev, task])
+    const refreshTasks = async () => {
+        try {
+            setError(null)
+            const data = await tasksApi.getAll()
+            setTasks(data)
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to load tasks")
+            console.error("Error loading tasks:", err)
+        }
     }
 
-    const updateTask = (taskId: string, updates: Partial<TaskItem>) => {
-        setTasks((prev) =>
-            prev.map((task) => (task.id === taskId ? { ...task, ...updates } : task))
-        )
+    useEffect(() => {
+        const loadInitialData = async () => {
+            setLoading(true)
+            await Promise.all([refreshProjects(), refreshTasks()])
+            setLoading(false)
+        }
+        loadInitialData()
+    }, [])
+
+    const addProject = async (name: string) => {
+        try {
+            setError(null)
+            const newProject = await projectsApi.create(name)
+            setProjects((prev) => [...prev, newProject])
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to add project")
+            throw err
+        }
     }
 
-    const deleteTask = (taskId: string) => {
-        setTasks((prev) => prev.filter((task) => task.id !== taskId))
+    const updateProject = async (id: string, name: string) => {
+        try {
+            setError(null)
+            const updatedProject = await projectsApi.update(id, name)
+            setProjects((prev) =>
+                prev.map((project) => (project.id === id ? updatedProject : project))
+            )
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to update project")
+            throw err
+        }
+    }
+
+    const deleteProject = async (id: string) => {
+        try {
+            setError(null)
+            await projectsApi.delete(id)
+            setProjects((prev) => prev.filter((project) => project.id !== id))
+            setTasks((prev) => prev.filter((task) => task.projectId !== id))
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to delete project")
+            throw err
+        }
+    }
+
+    const addTask = async (task: Omit<TaskItem, "id">) => {
+        try {
+            setError(null)
+            const newTask = await tasksApi.create(task)
+            setTasks((prev) => [...prev, newTask])
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to add task")
+            throw err
+        }
+    }
+
+    const updateTask = async (taskId: string, updates: Partial<Omit<TaskItem, "id">>) => {
+        try {
+            setError(null)
+            const updatedTask = await tasksApi.update(taskId, updates)
+            setTasks((prev) =>
+                prev.map((task) => (task.id === taskId ? updatedTask : task))
+            )
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to update task")
+            throw err
+        }
+    }
+
+    const deleteTask = async (taskId: string) => {
+        try {
+            setError(null)
+            await tasksApi.delete(taskId)
+            setTasks((prev) => prev.filter((task) => task.id !== taskId))
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to delete task")
+            throw err
+        }
     }
 
     return (
@@ -77,10 +132,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
             value={{
                 projects,
                 tasks,
+                loading,
+                error,
                 addProject,
+                updateProject,
+                deleteProject,
                 addTask,
                 updateTask,
                 deleteTask,
+                refreshProjects,
+                refreshTasks,
             }}
         >
             {children}

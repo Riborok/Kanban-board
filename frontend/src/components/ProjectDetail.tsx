@@ -2,7 +2,6 @@
 import { TaskStatus, Project } from "../utils/tasks.ts"
 import KanbanBoard from "./KanbanBoard.tsx"
 import TaskForm from "./TaskForm.tsx"
-import { generateId } from "../utils/id.ts"
 import { useApp } from "../context/AppContext.tsx"
 
 interface ProjectDetailProps {
@@ -16,22 +15,24 @@ export default function ProjectDetail({ project, onBack }: ProjectDetailProps) {
 
     const projectTasks = tasks.filter((task) => task.projectId === project.id)
 
-    const handleCreateTask = (
+    const handleCreateTask = async (
         title: string,
         description: string,
         assignee: string,
         status: TaskStatus
     ) => {
-        const newTask = {
-            id: generateId(),
-            title,
-            description,
-            assignee,
-            status,
-            projectId: project.id,
+        try {
+            await addTask({
+                title,
+                description,
+                assignee,
+                status,
+                projectId: project.id,
+            })
+            setShowForm(false)
+        } catch (error) {
+            console.error("Failed to create task:", error)
         }
-        addTask(newTask)
-        setShowForm(false)
     }
 
     return (

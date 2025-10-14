@@ -1,7 +1,6 @@
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { useApp } from "../context/AppContext"
-import { generateId } from "../utils/id"
 import ProjectList from "../components/ProjectList"
 import ProjectDetail from "../components/ProjectDetail.tsx"
 import ProjectForm from "../components/ProjectForm"
@@ -9,18 +8,18 @@ import ProjectForm from "../components/ProjectForm"
 export default function Projects() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const { projects, tasks, addProject } = useApp()
+    const { projects, tasks, addProject, loading } = useApp()
     const [showProjectForm, setShowProjectForm] = useState(false)
 
     const selectedProject = id ? projects.find((p) => p.id === id) : null
 
-    const handleCreateProject = (name: string) => {
-        const newProject = {
-            id: generateId(),
-            name,
+    const handleCreateProject = async (name: string) => {
+        try {
+            await addProject(name)
+            setShowProjectForm(false)
+        } catch (error) {
+            console.error("Failed to create project:", error)
         }
-        addProject(newProject)
-        setShowProjectForm(false)
     }
 
     const handleProjectClick = (projectId: string) => {
@@ -29,6 +28,14 @@ export default function Projects() {
 
     const handleBack = () => {
         navigate("/projects")
+    }
+
+    if (loading) {
+        return (
+            <section className="container mx-auto px-4">
+                <div className="text-center text-white text-xl">Загрузка...</div>
+            </section>
+        )
     }
 
     return (
