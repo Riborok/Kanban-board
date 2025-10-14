@@ -13,9 +13,9 @@ export default function Projects() {
 
     const selectedProject = id ? projects.find((p) => p.id === id) : null
 
-    const handleCreateProject = async (name: string) => {
+    const handleCreateProject = async (name: string, description: string) => {
         try {
-            await addProject(name)
+            await addProject(name, description)
             setShowProjectForm(false)
         } catch (error) {
             console.error("Failed to create project:", error)
@@ -33,7 +33,9 @@ export default function Projects() {
     if (loading) {
         return (
             <section className="container mx-auto px-4">
-                <div className="text-center text-white text-xl">Загрузка...</div>
+                <div className="text-center py-20 text-white text-xl">
+                    Загрузка...
+                </div>
             </section>
         )
     }
@@ -45,12 +47,17 @@ export default function Projects() {
             ) : (
                 <div>
                     <div className="mb-6 flex items-center justify-between">
-                        <h2 className="text-2xl font-bold text-white">Проекты</h2>
+                        <div>
+                            <h2 className="text-3xl font-bold text-white mb-2">
+                                Проекты
+                            </h2>
+                            <p className="text-gray-400">Управление проектами и задачами</p>
+                        </div>
                         <button
                             onClick={() => setShowProjectForm(!showProjectForm)}
-                            className="bg-violet-600 text-white px-4 py-2 rounded hover:bg-violet-700 cursor-pointer"
+                            className="bg-violet-600 text-white px-5 py-2 rounded hover:bg-violet-700 transition-colors font-medium"
                         >
-                            {showProjectForm ? "Отменить" : "+ Создать проект"}
+                            {showProjectForm ? "Отменить" : "Создать проект"}
                         </button>
                     </div>
 

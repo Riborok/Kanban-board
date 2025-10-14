@@ -1,68 +1,109 @@
 ﻿import express from "express"
-import { v4 as uuidv4 } from "uuid"
-import {
-    getProjects,
-    createProject,
-    updateProject,
-    deleteProject,
-} from "../data/storage.js"
+import Project from "../models/Project.js"
+import User from "../models/User.js"
+import { mapProject, mapMany } from "../utils/mappers.js"
 
 const router = express.Router()
 
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
     try {
-        const projects = getProjects()
-        res.json(projects)
+        const projects = await Project.find().populate('users', 'login name role');
+        res.json(mapMany(projects, mapProject))
     } catch (error) {
         res.status(500).json({ error: error.message })
     }
 })
 
-router.post("/", (req, res) => {
+router.post("/", async (req, res) => {
     try {
-        const { name } = req.body
+        const { name, description, users } = req.body
 
         if (!name) {
             return res.status(400).json({ error: "Project name is required" })
         }
 
-        const newProject = {
-            id: uuidv4(),
-            name: name,
+        const newProject = new Project({
+            name,
+            description: description || '',
+            users: users || []
+        })
+
+        const project = await newProject.save()
+
+        if (users && users.length > 0) {
+            await User.updateMany(
+                { _id: { $in: users } },
+                { $addToSet: { projects: project._id } }
+            )
         }
 
-        const project = createProject(newProject)
-        res.status(201).json(project)
+        await project.populate('users', 'login name role')
+        res.status(201).json(mapProject(project))
     } catch (error) {
         res.status(500).json({ error: error.message })
     }
 })
 
-router.put("/:id", (req, res) => {
+router.put("/:id", async (req, res) => {
     try {
-        const { name } = req.body
+        const { name, description, users } = req.body
 
-        if (!name) {
-            return res.status(400).json({ error: "Project name is required" })
+        const updates = {}
+        if (name) updates.name = name
+        if (description !== undefined) updates.description = description
+        if (users !== undefined) {
+            const oldProject = await Project.findById(req.params.id)
+            if (oldProject) {
+                await User.updateMany(
+                    { _id: { $in: oldProject.users } },
+                    { $pull: { projects: req.params.id } }
+                )
+                await User.updateMany(
+                    { _id: { $in: users } },
+                    { $addToSet: { projects: req.params.id } }
+                )
+            }
+            updates.users = users
         }
 
-        const updatedProject = updateProject(req.params.id, { name: name })
+        const updatedProject = await Project.findByIdAndUpdate(
+            req.params.id,
+            updates,
+            { new: true, runValidators: true }
+        ).populate('users', 'login name role');
+
         if (!updatedProject) {
             return res.status(404).json({ error: "Project not found" })
         }
 
-        res.json(updatedProject)
+        res.json(mapProject(updatedProject))
     } catch (error) {
         res.status(500).json({ error: error.message })
     }
 })
 
-router.delete("/:id", (req, res) => {
+router.delete("/:id", async (req, res) => {
     try {
-        const success = deleteProject(req.params.id)
-        if (!success) {
+        const project = await Project.findByIdAndDelete(req.params.id)
+        if (!project) {
             return res.status(404).json({ error: "Project not found" })
         }
+
+        const Task = (await import("../models/Task.js")).default
+        const tasks = await Task.find({ projectId: req.params.id })
+        const taskIds = tasks.map(t => t._id)
+
+        await Task.deleteMany({ projectId: req.params.id })
+
+        await User.updateMany(
+            { projects: req.params.id },
+            { $pull: { projects: req.params.id } }
+        )
+        await User.updateMany(
+            { tasks: { $in: taskIds } },
+            { $pull: { tasks: { $in: taskIds } } }
+        )
+
         res.status(204).send()
     } catch (error) {
         res.status(500).json({ error: error.message })
@@ -70,4 +111,3 @@ router.delete("/:id", (req, res) => {
 })
 
 export default router
-

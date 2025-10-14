@@ -1,43 +1,40 @@
-import { useState } from "react"
 import { Link, useLocation } from "react-router-dom"
 
 export default function Nav() {
-    const [hovered, setHovered] = useState<string | null>(null)
     const location = useLocation()
 
-    const item = (path: string, label: string) => {
-        const isActive =
-            location.pathname === path ||
-            (path === "/projects" && location.pathname.startsWith("/projects"))
-        const isHovered = hovered === path
-
-        return (
-            <Link
-                key={path}
-                to={path}
-                onMouseEnter={() => setHovered(path)}
-                onMouseLeave={() => setHovered(null)}
-                className={`
-                    mr-2 rounded-md px-3 py-1.5 border-2 text-sm
-                    ${
-                        isActive
-                            ? "border-violet-600"
-                            : isHovered
-                              ? "border-gray-700"
-                              : "border-white"
-                    }
-                `}
-            >
-                {label}
-            </Link>
-        )
-    }
+    const navItems = [
+        { path: "/", label: "Главная" },
+        { path: "/projects", label: "Проекты" },
+        { path: "/profile", label: "Профиль" },
+    ]
 
     return (
-        <nav className="mb-5 flex gap-4 justify-center">
-            {item("/", "Главная")}
-            {item("/projects", "Проекты")}
-            {item("/profile", "Профиль")}
+        <nav className="mb-8">
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-1 inline-flex gap-1">
+                {navItems.map((item) => {
+                    const isActive =
+                        location.pathname === item.path ||
+                        (item.path === "/projects" && location.pathname.startsWith("/projects"))
+
+                    return (
+                        <Link
+                            key={item.path}
+                            to={item.path}
+                            className={`
+                                px-5 py-2 rounded text-sm font-medium transition-colors
+                                ${
+                                    isActive
+                                        ? "bg-violet-600 text-white"
+                                        : "text-gray-400 hover:text-white hover:bg-gray-700"
+                                }
+                            `}
+                        >
+                            {item.label}
+                        </Link>
+                    )
+                })}
+            </div>
         </nav>
     )
 }

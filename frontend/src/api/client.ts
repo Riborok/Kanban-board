@@ -9,21 +9,21 @@ export const projectsApi = {
         return response.json()
     },
 
-    create: async (name: string): Promise<Project> => {
+    create: async (name: string, description?: string): Promise<Project> => {
         const response = await fetch(`${API_BASE_URL}/projects`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name }),
+            body: JSON.stringify({ name, description }),
         })
         if (!response.ok) throw new Error("Failed to create project")
         return response.json()
     },
 
-    update: async (id: string, name: string): Promise<Project> => {
+    update: async (id: string, name: string, description?: string): Promise<Project> => {
         const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name }),
+            body: JSON.stringify({ name, description }),
         })
         if (!response.ok) throw new Error("Failed to update project")
         return response.json()
@@ -49,7 +49,7 @@ export const tasksApi = {
         return response.json()
     },
 
-    create: async (task: Omit<TaskItem, "id">): Promise<TaskItem> => {
+    create: async (task: { title: string; description: string; user: string; status: string; projectId: string }): Promise<TaskItem> => {
         const response = await fetch(`${API_BASE_URL}/tasks`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -59,7 +59,7 @@ export const tasksApi = {
         return response.json()
     },
 
-    update: async (id: string, updates: Partial<Omit<TaskItem, "id">>): Promise<TaskItem> => {
+    update: async (id: string, updates: { title?: string; description?: string; user?: string; status?: string; projectId?: string }): Promise<TaskItem> => {
         const response = await fetch(`${API_BASE_URL}/tasks/${id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
@@ -76,4 +76,3 @@ export const tasksApi = {
         if (!response.ok) throw new Error("Failed to delete task")
     },
 }
-

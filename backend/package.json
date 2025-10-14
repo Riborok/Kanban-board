@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "start-server": "node src/index.js",
-    "dev-server": "nodemon src/index.js"
+    "dev-server": "nodemon src/index.js",
+    "seed": "node src/data/seed.js",
+    "drop-indexes": "node src/data/drop-indexes.js"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +18,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "mongoose": "^8.19.1",
     "uuid": "^11.0.5"
   },
   "devDependencies": {

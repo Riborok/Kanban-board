@@ -18,14 +18,14 @@ export default function ProjectDetail({ project, onBack }: ProjectDetailProps) {
     const handleCreateTask = async (
         title: string,
         description: string,
-        assignee: string,
+        user: string,
         status: TaskStatus
     ) => {
         try {
             await addTask({
                 title,
                 description,
-                assignee,
+                user,
                 status,
                 projectId: project.id,
             })
@@ -36,23 +36,43 @@ export default function ProjectDetail({ project, onBack }: ProjectDetailProps) {
     }
 
     return (
-        <div>
-            <div className="mb-6 flex items-center justify-between">
-                <div className="flex items-center gap-4">
+        <div className="space-y-6">
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+                <div className="flex items-center gap-4 mb-4">
                     <button
                         onClick={onBack}
-                        className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600 cursor-pointer"
+                        className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors"
                     >
                         ← Назад
                     </button>
-                    <h2 className="text-2xl font-bold text-white">{project.name}</h2>
+                    <div className="flex-1">
+                        <h2 className="text-2xl font-bold text-white">{project.name}</h2>
+                        {project.description && (
+                            <p className="text-sm text-gray-400 mt-1">{project.description}</p>
+                        )}
+                    </div>
+                    <button
+                        onClick={() => setShowForm(!showForm)}
+                        className="bg-violet-600 text-white px-5 py-2 rounded hover:bg-violet-700 transition-colors font-medium"
+                    >
+                        {showForm ? "Отменить" : "Создать задачу"}
+                    </button>
                 </div>
-                <button
-                    onClick={() => setShowForm(!showForm)}
-                    className="bg-violet-600 text-white px-4 py-2 rounded hover:bg-violet-700 cursor-pointer"
-                >
-                    {showForm ? "Отменить" : "+ Создать задачу"}
-                </button>
+
+                {project.users && project.users.length > 0 && (
+                    <div className="bg-gray-900 border border-gray-700 rounded-lg p-4">
+                        <h3 className="text-sm font-semibold text-gray-400 mb-3">
+                            Участники проекта:
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                            {project.users.map((user) => (
+                                <div key={user.id} className="bg-gray-700 text-white px-3 py-2 rounded">
+                                    {user.name || user.login}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {showForm && (
