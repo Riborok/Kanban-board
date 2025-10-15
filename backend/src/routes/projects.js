@@ -2,49 +2,74 @@
 import Project from "../models/Project.js"
 import User from "../models/User.js"
 import { mapProject, mapMany } from "../utils/mappers.js"
+import { authenticateToken, requireAdmin } from "../middleware/auth.js"
 
 const router = express.Router()
 
-router.get("/", async (req, res) => {
+router.get("/", authenticateToken, async (req, res) => {
     try {
-        const projects = await Project.find().populate('users', 'login name role');
+        let projects;
+
+        if (req.user.role === 'admin') {
+            projects = await Project.find().populate('users', 'login role');
+        } else {
+            projects = await Project.find({ users: req.user.userId }).populate('users', 'login role');
+        }
+
         res.json(mapMany(projects, mapProject))
     } catch (error) {
         res.status(500).json({ error: error.message })
     }
 })
 
-router.post("/", async (req, res) => {
+router.post("/", authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { name, description, users } = req.body
 
         if (!name) {
-            return res.status(400).json({ error: "Project name is required" })
+            return res.status(400).json({ error: "Название проекта обязательно" })
+        }
+
+        let userIds = []
+
+        if (users && users.length > 0) {
+            const dbUsers = await User.find({ login: { $in: users } })
+
+            if (dbUsers.length !== users.length) {
+                const foundLogins = dbUsers.map(u => u.login)
+                const notFoundLogins = users.filter(login => !foundLogins.includes(login))
+                return res.status(404).json({
+                    error: `Пользователи не найдены: ${notFoundLogins.join(', ')}`
+                })
+            }
+
+            userIds = dbUsers.map(u => u._id)
         }
 
         const newProject = new Project({
             name,
             description: description || '',
-            users: users || []
+            users: userIds
         })
 
         const project = await newProject.save()
 
-        if (users && users.length > 0) {
+        if (userIds.length > 0) {
             await User.updateMany(
-                { _id: { $in: users } },
+                { _id: { $in: userIds } },
                 { $addToSet: { projects: project._id } }
             )
         }
 
-        await project.populate('users', 'login name role')
+        await project.populate('users', 'login role')
         res.status(201).json(mapProject(project))
     } catch (error) {
-        res.status(500).json({ error: error.message })
+        console.error('Ошибка создания проекта:', error)
+        res.status(500).json({ error: error.message || 'Ошибка сервера при создании проекта' })
     }
 })
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { name, description, users } = req.body
 
@@ -70,7 +95,7 @@ router.put("/:id", async (req, res) => {
             req.params.id,
             updates,
             { new: true, runValidators: true }
-        ).populate('users', 'login name role');
+        ).populate('users', 'login role');
 
         if (!updatedProject) {
             return res.status(404).json({ error: "Project not found" })
@@ -82,7 +107,7 @@ router.put("/:id", async (req, res) => {
     }
 })
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authenticateToken, requireAdmin, async (req, res) => {
     try {
         const project = await Project.findByIdAndDelete(req.params.id)
         if (!project) {

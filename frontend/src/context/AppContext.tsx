@@ -1,5 +1,5 @@
 ﻿import { createContext, useContext, useState, useEffect, ReactNode } from "react"
-import { Project, TaskItem } from "../utils/tasks"
+import { Project, TaskItem, Attachment } from "../utils/tasks"
 import { projectsApi, tasksApi } from "../api/client"
 
 interface AppContextType {
@@ -7,11 +7,11 @@ interface AppContextType {
     tasks: TaskItem[]
     loading: boolean
     error: string | null
-    addProject: (name: string, description?: string) => Promise<void>
+    addProject: (name: string, description?: string, users?: string[]) => Promise<void>
     updateProject: (id: string, name: string, description?: string) => Promise<void>
     deleteProject: (id: string) => Promise<void>
-    addTask: (task: { title: string; description: string; user: string; status: string; projectId: string }) => Promise<void>
-    updateTask: (taskId: string, updates: { title?: string; description?: string; user?: string; status?: string; projectId?: string }) => Promise<void>
+    addTask: (task: { title: string; description: string; user: string; status: string; projectId: string; attachments?: Attachment[] }) => Promise<void>
+    updateTask: (taskId: string, updates: { title?: string; description?: string; user?: string; status?: string; projectId?: string; attachments?: Attachment[] }) => Promise<void>
     deleteTask: (taskId: string) => Promise<void>
     refreshProjects: () => Promise<void>
     refreshTasks: () => Promise<void>
@@ -56,10 +56,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         loadInitialData()
     }, [])
 
-    const addProject = async (name: string, description?: string) => {
+    const addProject = async (name: string, description?: string, users?: string[]) => {
         try {
             setError(null)
-            const newProject = await projectsApi.create(name, description)
+            const newProject = await projectsApi.create(name, description, users)
             setProjects((prev) => [...prev, newProject])
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to add project")
@@ -92,7 +92,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
     }
 
-    const addTask = async (task: { title: string; description: string; user: string; status: string; projectId: string }) => {
+    const addTask = async (task: { title: string; description: string; user: string; status: string; projectId: string; attachments?: Attachment[] }) => {
         try {
             setError(null)
             const newTask = await tasksApi.create(task)
@@ -103,7 +103,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
     }
 
-    const updateTask = async (taskId: string, updates: { title?: string; description?: string; user?: string; status?: string; projectId?: string }) => {
+    const updateTask = async (taskId: string, updates: { title?: string; description?: string; user?: string; status?: string; projectId?: string; attachments?: Attachment[] }) => {
         try {
             setError(null)
             const updatedTask = await tasksApi.update(taskId, updates)

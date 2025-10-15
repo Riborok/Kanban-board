@@ -10,15 +10,18 @@ export default function Projects() {
     const navigate = useNavigate()
     const { projects, tasks, addProject, loading } = useApp()
     const [showProjectForm, setShowProjectForm] = useState(false)
+    const [error, setError] = useState<string>('')
 
     const selectedProject = id ? projects.find((p) => p.id === id) : null
 
-    const handleCreateProject = async (name: string, description: string) => {
+    const handleCreateProject = async (name: string, description: string, users: string[]) => {
         try {
-            await addProject(name, description)
+            setError('')
+            await addProject(name, description, users)
             setShowProjectForm(false)
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to create project:", error)
+            setError(error.message || "Не удалось создать проект")
         }
     }
 
@@ -46,6 +49,12 @@ export default function Projects() {
                 <ProjectDetail project={selectedProject} onBack={handleBack} />
             ) : (
                 <div>
+                    {error && (
+                        <div className="mb-4 bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded">
+                            <strong className="font-bold">Ошибка: </strong>
+                            <span>{error}</span>
+                        </div>
+                    )}
                     <div className="mb-6 flex items-center justify-between">
                         <div>
                             <h2 className="text-3xl font-bold text-white mb-2">

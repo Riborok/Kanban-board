@@ -24,7 +24,25 @@ const taskSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Project',
         required: true
-    }
+    },
+    attachments: [{
+        fileName: {
+            type: String,
+            required: true
+        },
+        fileData: {
+            type: String,
+            required: true
+        },
+        mimeType: {
+            type: String,
+            required: true
+        },
+        fileSize: {
+            type: Number,
+            required: true
+        }
+    }]
 }, {
     timestamps: true
 });

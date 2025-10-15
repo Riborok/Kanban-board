@@ -33,7 +33,7 @@ export default function ProjectCard({ project, taskCount, onClick }: ProjectCard
                                 key={user.id}
                                 className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded"
                             >
-                                {user.name || user.login}
+                                {user.login}
                             </span>
                         ))}
                         {project.users.length > 4 && (

@@ -1,9 +1,9 @@
 ﻿import { useState } from "react"
-import { TaskItem, TaskStatus, getUserId, getUserName } from "../utils/tasks"
+import { TaskItem, TaskStatus, getUserId, getUserName, Attachment } from "../utils/tasks"
 
 interface TaskCardProps {
     task: TaskItem
-    onUpdate?: (taskId: string, updates: { title?: string; description?: string; user?: string; status?: string; projectId?: string }) => void
+    onUpdate?: (taskId: string, updates: { title?: string; description?: string; user?: string; status?: string; projectId?: string; attachments?: Attachment[] }) => void
     onDelete?: (taskId: string) => void
 }
 
@@ -33,6 +33,44 @@ export default function TaskCard({ task, onUpdate, onDelete }: TaskCardProps) {
         if (onDelete) {
             onDelete(task.id)
         }
+    }
+
+    const handleDownloadAttachment = (attachment: Attachment) => {
+        try {
+            const byteCharacters = atob(attachment.fileData)
+            const byteNumbers = new Array(byteCharacters.length)
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i)
+            }
+            const byteArray = new Uint8Array(byteNumbers)
+            const blob = new Blob([byteArray], { type: attachment.mimeType })
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+            link.download = attachment.fileName
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(url)
+        } catch (error) {
+            console.error('Ошибка при скачивании файла:', error)
+        }
+    }
+
+    const formatFileSize = (bytes: number): string => {
+        if (bytes < 1024) return bytes + ' B'
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+    }
+
+    const getFileIcon = (mimeType: string): string => {
+        if (mimeType.startsWith('image/')) return '🖼️'
+        if (mimeType.startsWith('video/')) return '🎥'
+        if (mimeType.startsWith('audio/')) return '🎵'
+        if (mimeType.includes('pdf')) return '📄'
+        if (mimeType.includes('zip') || mimeType.includes('rar')) return '📦'
+        if (mimeType.includes('json') || mimeType.includes('xml')) return '📋'
+        return '📎'
     }
 
     if (isEditing) {
@@ -128,6 +166,30 @@ export default function TaskCard({ task, onUpdate, onDelete }: TaskCardProps) {
             {task.description && (
                 <p className="text-xs text-gray-400 mb-3">{task.description}</p>
             )}
+
+            {task.attachments && task.attachments.length > 0 && (
+                <div className="mb-3 space-y-1">
+                    <span className="text-xs text-gray-500 block mb-1">Вложения:</span>
+                    {task.attachments.map((attachment, index) => (
+                        <button
+                            key={index}
+                            onClick={() => handleDownloadAttachment(attachment)}
+                            className="flex items-center gap-2 w-full text-left p-2 rounded bg-gray-700 hover:bg-gray-600 group/file"
+                        >
+                            <span className="text-lg">{getFileIcon(attachment.mimeType)}</span>
+                            <div className="flex-1 min-w-0">
+                                <div className="text-xs text-white truncate">
+                                    {attachment.fileName}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                    {formatFileSize(attachment.fileSize)}
+                                </div>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            )}
+
             <div className="flex items-center gap-2 pt-2 border-t border-gray-700">
                 <span className="text-xs text-gray-500">Исполнитель:</span>
                 <span className="text-xs font-medium text-violet-400">{displayName}</span>
