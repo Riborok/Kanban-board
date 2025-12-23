@@ -1,6 +1,7 @@
-﻿import { Project, TaskItem, Attachment } from "../utils/tasks"
+﻿import { Project, TaskItem, Attachment, User } from "../utils/tasks"
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
+const GRAPHQL_URL = `${API_BASE_URL}/graphql`
 
 export const tokenStorage = {
     getAccessToken: () => localStorage.getItem('accessToken'),
@@ -18,7 +19,7 @@ export const tokenStorage = {
         const user = localStorage.getItem('user');
         return user ? JSON.parse(user) : null;
     },
-    setUser: (user: any) => {
+    setUser: (user: User) => {
         localStorage.setItem('user', JSON.stringify(user));
     }
 };
@@ -31,23 +32,84 @@ const getAuthHeaders = () => {
     };
 };
 
+interface GraphQLResponse<T> {
+    data?: T;
+    errors?: Array<{ message: string }>;
+}
+
+const graphqlRequest = async <T>(query: string, variables?: Record<string, unknown>): Promise<T> => {
+    const response = await fetch(GRAPHQL_URL, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ query, variables })
+    });
+
+    const result: GraphQLResponse<T> = await response.json();
+
+    if (result.errors && result.errors.length > 0) {
+        const errorMessage = result.errors[0].message;
+
+        // Проверяем нужен ли refresh токена
+        if (errorMessage.includes('Не авторизован') || response.status === 401) {
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+                // Повторяем запрос с новым токеном
+                const retryResponse = await fetch(GRAPHQL_URL, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ query, variables })
+                });
+                const retryResult: GraphQLResponse<T> = await retryResponse.json();
+
+                if (retryResult.errors && retryResult.errors.length > 0) {
+                    throw new Error(retryResult.errors[0].message);
+                }
+
+                return retryResult.data as T;
+            } else {
+                window.location.href = '/';
+                throw new Error('Сессия истекла');
+            }
+        }
+
+        throw new Error(errorMessage);
+    }
+
+    return result.data as T;
+};
+
 const refreshAccessToken = async (): Promise<string | null> => {
     const refreshToken = tokenStorage.getRefreshToken();
     if (!refreshToken) return null;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        const query = `
+            mutation Refresh($refreshToken: String!) {
+                refresh(refreshToken: $refreshToken) {
+                    accessToken
+                    user {
+                        id
+                        login
+                        role
+                    }
+                }
+            }
+        `;
+
+        const response = await fetch(GRAPHQL_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken })
+            body: JSON.stringify({ query, variables: { refreshToken } })
         });
 
-        if (!response.ok) {
+        const result = await response.json();
+
+        if (result.errors) {
             tokenStorage.clearTokens();
             return null;
         }
 
-        const data = await response.json();
+        const data = result.data.refresh;
         tokenStorage.setTokens(data.accessToken, refreshToken);
         if (data.user) tokenStorage.setUser(data.user);
         return data.accessToken;
@@ -57,53 +119,40 @@ const refreshAccessToken = async (): Promise<string | null> => {
     }
 };
 
-const fetchWithAuth = async (url: string, options: RequestInit = {}): Promise<Response> => {
-    const headers = getAuthHeaders();
-    let response = await fetch(url, {
-        ...options,
-        headers: { ...headers, ...options.headers }
-    });
-
-    if (response.status === 401) {
-        const newToken = await refreshAccessToken();
-        if (newToken) {
-            response = await fetch(url, {
-                ...options,
-                headers: { ...getAuthHeaders(), ...options.headers }
-            });
-        } else {
-            window.location.href = '/';
-        }
-    }
-
-    return response;
-};
-
 export const authApi = {
     register: async (login: string, password: string, role?: string) => {
-        const response = await fetch(`${API_BASE_URL}/auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ login, password, role })
-        });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Ошибка регистрации');
-        }
-        return response.json();
+        const query = `
+            mutation Register($login: String!, $password: String!, $role: String) {
+                register(login: $login, password: $password, role: $role) {
+                    id
+                    login
+                    role
+                }
+            }
+        `;
+
+        const result = await graphqlRequest<{ register: User }>(query, { login, password, role });
+        return { user: result.register };
     },
 
     login: async (login: string, password: string) => {
-        const response = await fetch(`${API_BASE_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ login, password })
-        });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Ошибка входа');
-        }
-        const data = await response.json();
+        const query = `
+            mutation Login($login: String!, $password: String!) {
+                login(login: $login, password: $password) {
+                    accessToken
+                    refreshToken
+                    user {
+                        id
+                        login
+                        role
+                    }
+                    message
+                }
+            }
+        `;
+
+        const result = await graphqlRequest<{ login: { accessToken: string; refreshToken: string; user: User; message: string } }>(query, { login, password });
+        const data = result.login;
         tokenStorage.setTokens(data.accessToken, data.refreshToken);
         tokenStorage.setUser(data.user);
         return data;
@@ -114,102 +163,200 @@ export const authApi = {
     },
 
     getCurrentUser: async () => {
-        const response = await fetchWithAuth(`${API_BASE_URL}/auth/me`);
-        if (!response.ok) throw new Error('Не удалось получить данные пользователя');
-        return response.json();
+        const query = `
+            query Me {
+                me {
+                    id
+                    login
+                    role
+                }
+            }
+        `;
+
+        const result = await graphqlRequest<{ me: User }>(query);
+        return { user: result.me };
     },
 
     getUsers: async () => {
-        const response = await fetchWithAuth(`${API_BASE_URL}/auth/users`);
-        if (!response.ok) throw new Error('Не удалось получить список пользователей');
-        const data = await response.json();
-        return data.users;
+        const query = `
+            query Users {
+                users {
+                    id
+                    login
+                    role
+                }
+            }
+        `;
+
+        const result = await graphqlRequest<{ users: User[] }>(query);
+        return result.users;
     }
 };
 
 export const projectsApi = {
     getAll: async (): Promise<Project[]> => {
-        const response = await fetchWithAuth(`${API_BASE_URL}/projects`)
-        if (!response.ok) throw new Error("Failed to fetch projects")
-        return response.json()
+        const query = `
+            query Projects {
+                projects {
+                    id
+                    name
+                    description
+                    users {
+                        id
+                        login
+                        role
+                    }
+                }
+            }
+        `;
+
+        const result = await graphqlRequest<{ projects: Project[] }>(query);
+        return result.projects;
     },
 
     create: async (name: string, description?: string, userLogins?: string[]): Promise<Project> => {
-        const response = await fetchWithAuth(`${API_BASE_URL}/projects`, {
-            method: "POST",
-            body: JSON.stringify({ name, description, userLogins }),
-        })
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('Failed to create project:', response.status, errorData);
-            throw new Error(errorData.error || errorData.message || "Failed to create project")
-        }
-        return response.json()
+        const query = `
+            mutation CreateProject($name: String!, $description: String, $users: [String]) {
+                createProject(name: $name, description: $description, users: $users) {
+                    id
+                    name
+                    description
+                    users {
+                        id
+                        login
+                        role
+                    }
+                }
+            }
+        `;
+
+        const result = await graphqlRequest<{ createProject: Project }>(query, { name, description, users: userLogins });
+        return result.createProject;
     },
 
     update: async (id: string, name: string, description?: string): Promise<Project> => {
-        const response = await fetchWithAuth(`${API_BASE_URL}/projects/${id}`, {
-            method: "PUT",
-            body: JSON.stringify({ name, description }),
-        })
-        if (!response.ok) throw new Error("Failed to update project")
-        return response.json()
+        const query = `
+            mutation UpdateProject($id: ID!, $name: String, $description: String) {
+                updateProject(id: $id, name: $name, description: $description) {
+                    id
+                    name
+                    description
+                    users {
+                        id
+                        login
+                        role
+                    }
+                }
+            }
+        `;
+
+        const result = await graphqlRequest<{ updateProject: Project }>(query, { id, name, description });
+        return result.updateProject;
     },
 
     delete: async (id: string): Promise<void> => {
-        const response = await fetchWithAuth(`${API_BASE_URL}/projects/${id}`, {
-            method: "DELETE",
-        })
-        if (!response.ok) throw new Error("Failed to delete project")
+        const query = `
+            mutation DeleteProject($id: ID!) {
+                deleteProject(id: $id)
+            }
+        `;
+
+        await graphqlRequest<{ deleteProject: boolean }>(query, { id });
     },
 }
 
 export const tasksApi = {
     getAll: async (projectId?: string, status?: string): Promise<TaskItem[]> => {
-        const params = new URLSearchParams()
-        if (projectId) params.append("projectId", projectId)
-        if (status) params.append("status", status)
+        const query = `
+            query Tasks($projectId: ID, $status: String) {
+                tasks(projectId: $projectId, status: $status) {
+                    id
+                    title
+                    description
+                    status
+                    projectId
+                    user {
+                        id
+                        login
+                        role
+                    }
+                    attachments {
+                        fileName
+                        fileData
+                        mimeType
+                        fileSize
+                    }
+                }
+            }
+        `;
 
-        const url = `${API_BASE_URL}/tasks${params.toString() ? `?${params.toString()}` : ""}`
-        const response = await fetchWithAuth(url)
-        if (!response.ok) throw new Error("Failed to fetch tasks")
-        return response.json()
+        const result = await graphqlRequest<{ tasks: TaskItem[] }>(query, { projectId, status });
+        return result.tasks;
     },
 
     create: async (task: { title: string; description: string; user: string; status: string; projectId: string; attachments?: Attachment[] }): Promise<TaskItem> => {
-        const response = await fetchWithAuth(`${API_BASE_URL}/tasks`, {
-            method: "POST",
-            body: JSON.stringify(task),
-        })
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('Failed to create task:', response.status, errorData);
-            throw new Error(errorData.error || errorData.message || "Failed to create task")
-        }
-        return response.json()
+        const query = `
+            mutation CreateTask($title: String!, $description: String, $user: String!, $status: String, $projectId: ID!, $attachments: [AttachmentInput]) {
+                createTask(title: $title, description: $description, user: $user, status: $status, projectId: $projectId, attachments: $attachments) {
+                    id
+                    title
+                    description
+                    status
+                    projectId
+                    user {
+                        id
+                        login
+                        role
+                    }
+                    attachments {
+                        fileName
+                        fileData
+                        mimeType
+                        fileSize
+                    }
+                }
+            }
+        `;
+
+        const result = await graphqlRequest<{ createTask: TaskItem }>(query, task);
+        return result.createTask;
     },
 
     update: async (id: string, updates: { title?: string; description?: string; user?: string; status?: string; projectId?: string; attachments?: Attachment[] }): Promise<TaskItem> => {
-        const response = await fetchWithAuth(`${API_BASE_URL}/tasks/${id}`, {
-            method: "PUT",
-            body: JSON.stringify(updates),
-        })
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('Failed to update task:', response.status, errorData);
-            throw new Error(errorData.error || errorData.message || "Failed to update task")
-        }
-        return response.json()
+        const query = `
+            mutation UpdateTask($id: ID!, $title: String, $description: String, $user: ID, $status: String, $projectId: ID, $attachments: [AttachmentInput]) {
+                updateTask(id: $id, title: $title, description: $description, user: $user, status: $status, projectId: $projectId, attachments: $attachments) {
+                    id
+                    title
+                    description
+                    status
+                    projectId
+                    user {
+                        id
+                        login
+                        role
+                    }
+                    attachments {
+                        fileName
+                        fileData
+                        mimeType
+                        fileSize
+                    }
+                }
+            }
+        `;
+
+        const result = await graphqlRequest<{ updateTask: TaskItem }>(query, { id, ...updates });
+        return result.updateTask;
     },
 
     delete: async (id: string): Promise<void> => {
-        const response = await fetchWithAuth(`${API_BASE_URL}/tasks/${id}`, {
-            method: "DELETE",
-        })
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('Failed to delete task:', response.status, errorData);
-            throw new Error(errorData.error || errorData.message || "Failed to delete task")
-        }
+        const query = `
+            mutation DeleteTask($id: ID!) {
+                deleteTask(id: $id)
+            }
+        `;
+
+        await graphqlRequest<{ deleteTask: boolean }>(query, { id });
     },
 }
