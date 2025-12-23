@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package project;
+
+service ProjectService {
+  rpc GetProjects (Empty) returns (ProjectsResponse);
+  rpc GetProject (GetProjectRequest) returns (ProjectResponse);
+  rpc CreateProject (CreateProjectRequest) returns (ProjectResponse);
+  rpc UpdateProject (UpdateProjectRequest) returns (ProjectResponse);
+  rpc DeleteProject (DeleteProjectRequest) returns (DeleteResponse);
+}
+
+message Empty {}
+
+message GetProjectRequest {
+  string id = 1;
+}
+
+message CreateProjectRequest {
+  string name = 1;
+  string description = 2;
+  repeated string users = 3;
+}
+
+message UpdateProjectRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  repeated string users = 4;
+}
+
+message DeleteProjectRequest {
+  string id = 1;
+}
+
+message ProjectUser {
+  string id = 1;
+  string login = 2;
+  string role = 3;
+}
+
+message ProjectResponse {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  repeated ProjectUser users = 4;
+  string createdAt = 5;
+  string updatedAt = 6;
+}
+
+message ProjectsResponse {
+  repeated ProjectResponse projects = 1;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}
+

@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package task;
+
+service TaskService {
+  rpc GetTasks (GetTasksRequest) returns (TasksResponse);
+  rpc GetTask (GetTaskRequest) returns (TaskResponse);
+  rpc CreateTask (CreateTaskRequest) returns (TaskResponse);
+  rpc UpdateTask (UpdateTaskRequest) returns (TaskResponse);
+  rpc DeleteTask (DeleteTaskRequest) returns (DeleteResponse);
+}
+
+message Empty {}
+
+message GetTasksRequest {
+  string projectId = 1;
+  string status = 2;
+}
+
+message GetTaskRequest {
+  string id = 1;
+}
+
+message Attachment {
+  string fileName = 1;
+  string fileData = 2;
+  string mimeType = 3;
+  int64 fileSize = 4;
+}
+
+message CreateTaskRequest {
+  string title = 1;
+  string description = 2;
+  string userLogin = 3;
+  string status = 4;
+  string projectId = 5;
+  repeated Attachment attachments = 6;
+}
+
+message UpdateTaskRequest {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string userId = 4;
+  string status = 5;
+  string projectId = 6;
+  repeated Attachment attachments = 7;
+}
+
+message DeleteTaskRequest {
+  string id = 1;
+}
+
+message TaskUser {
+  string id = 1;
+  string login = 2;
+  string role = 3;
+}
+
+message TaskProject {
+  string id = 1;
+  string name = 2;
+}
+
+message TaskResponse {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string status = 4;
+  TaskUser user = 5;
+  TaskProject project = 6;
+  repeated Attachment attachments = 7;
+  string createdAt = 8;
+  string updatedAt = 9;
+}
+
+message TasksResponse {
+  repeated TaskResponse tasks = 1;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}
+

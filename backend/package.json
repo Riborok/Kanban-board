@@ -7,13 +7,17 @@
     "start-server": "node src/index.js",
     "dev-server": "nodemon src/index.js",
     "seed": "node src/data/seed.js",
-    "drop-indexes": "node src/data/drop-indexes.js"
+    "drop-indexes": "node src/data/drop-indexes.js",
+    "start-grpc": "node src/grpc/server.js",
+    "dev-grpc": "nodemon src/grpc/server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/proto-loader": "^0.8.0",
     "apollo-server-express": "^3.13.0",
     "bcrypt": "^6.0.0",
     "body-parser": "^1.20.3",
